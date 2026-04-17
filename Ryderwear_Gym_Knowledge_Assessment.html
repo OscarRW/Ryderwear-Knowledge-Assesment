@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ryderwear Gym — Team Knowledge Assessment</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #ffffff; --bg2: #f8f9fa; --bg3: #f1f3f5;
+    --txt: #111827; --txt2: #6b7280; --txt3: #9ca3af;
+    --bdr: #e5e7eb; --bdr2: #d1d5db;
+    --success-bg: #f0fdf4; --success-txt: #16a34a; --success-bdr: #86efac;
+    --warn-bg: #fffbeb; --warn-txt: #d97706; --warn-bdr: #fcd34d;
+    --info-bg: #eff6ff; --info-txt: #2563eb; --info-bdr: #93c5fd;
+    --danger-bg: #fef2f2; --danger-txt: #dc2626; --danger-bdr: #fca5a5;
+    --radius: 8px; --radius-sm: 5px;
+    --star-on: #f59e0b; --star-off: #d1d5db;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg3); color: var(--txt); line-height: 1.5;
+    min-height: 100vh;
+  }
+  #wrap { max-width: 780px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+
+  /* INPUTS */
+  input[type=text], input[type=date], select, textarea {
+    font-family: inherit; font-size: 13.5px; color: var(--txt);
+    background: var(--bg); border: 1px solid var(--bdr2);
+    border-radius: var(--radius-sm); padding: 8px 10px;
+    outline: none; transition: border-color .15s;
+  }
+  input[type=text]:focus, input[type=date]:focus, select:focus, textarea:focus {
+    border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,.12);
+  }
+  textarea { resize: vertical; }
+  select { cursor: pointer; }
+
+  /* BUTTONS */
+  button {
+    font-family: inherit; font-size: 13px; cursor: pointer;
+    border: 1px solid var(--bdr2); border-radius: var(--radius-sm);
+    padding: 7px 16px; background: var(--bg); color: var(--txt);
+    transition: background .15s, border-color .15s;
+  }
+  button:hover { background: var(--bg2); }
+  .btn-primary {
+    background: #111827; color: #fff; border-color: #111827; font-weight: 500;
+  }
+  .btn-primary:hover { background: #1f2937; }
+  .btn-success {
+    background: var(--success-bg); color: var(--success-txt);
+    border-color: var(--success-bdr); font-weight: 500;
+  }
+  .btn-success:hover { background: #dcfce7; }
+  .btn-info {
+    background: var(--info-bg); color: var(--info-txt);
+    border-color: var(--info-bdr); font-weight: 500;
+  }
+  .btn-info:hover { background: #dbeafe; }
+
+  /* CARDS */
+  .card {
+    background: var(--bg); border: 1px solid var(--bdr);
+    border-radius: var(--radius); overflow: hidden;
+    margin-bottom: 1rem;
+  }
+  .card-hdr {
+    background: #1a1a1a; padding: 10px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .card-hdr h2 { font-size: 15px; font-weight: 500; color: #fff; margin: 0; }
+  .card-hdr-mgr { background: #2d1b69; }
+  .card-note {
+    padding: 6px 16px; background: var(--bg2);
+    border-bottom: 1px solid var(--bdr);
+    font-size: 11px; color: var(--txt2); font-style: italic;
+  }
+  .q-row {
+    padding: .875rem 1.25rem;
+    border-bottom: 1px solid var(--bdr);
+  }
+  .q-row:last-child { border-bottom: none; }
+  .q-text { font-size: 13.5px; color: var(--txt); margin-bottom: 2px; }
+  .q-num { font-size: 12px; color: var(--txt2); }
+
+  /* STARS */
+  .star-row { display: flex; align-items: center; gap: 3px; margin: 5px 0; }
+  .star {
+    font-size: 24px; cursor: pointer; line-height: 1;
+    user-select: none; color: var(--star-off);
+    transition: color .1s, transform .1s;
+  }
+  .star:hover { transform: scale(1.15); }
+  .star.on { color: var(--star-on); }
+  .star-lbl { font-size: 11px; color: var(--txt2); margin-left: 6px; }
+
+  /* LOGO BAR */
+  .logo-bar {
+    display: flex; align-items: center; gap: 14px;
+    padding-bottom: .875rem; margin-bottom: 1.25rem;
+    border-bottom: 1px solid var(--bdr);
+  }
+  .logo-bar img { height: 44px; object-fit: contain; }
+  .logo-bar-text { font-size: 18px; font-weight: 600; color: var(--txt); }
+  .logo-bar-sub { font-size: 10px; color: var(--txt2); letter-spacing: .1em; text-transform: uppercase; }
+
+  /* SUMMARY CARDS */
+  .summary-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 1.5rem; }
+  .summary-card { border-radius: var(--radius); padding: .875rem; text-align: center; }
+  .summary-card p:first-child { font-size: 11px; margin-bottom: 3px; }
+  .summary-card p:last-child { font-size: 24px; font-weight: 600; }
+
+  /* ACTION ITEMS */
+  .action-item {
+    background: var(--bg); border: 1px solid var(--bdr);
+    border-radius: var(--radius); padding: .875rem 1.25rem;
+    margin-bottom: .625rem;
+  }
+  .action-badges { display: flex; gap: 8px; align-items: center; margin-bottom: 4px; flex-wrap: wrap; }
+  .badge { font-size: 10px; border-radius: 4px; padding: 2px 8px; font-weight: 600; }
+  .badge-1 { background: var(--danger-bg); color: var(--danger-txt); }
+  .badge-2, .badge-3 { background: var(--warn-bg); color: var(--warn-txt); }
+  .badge-4 { background: var(--info-bg); color: var(--info-txt); }
+  .action-sec { font-size: 10px; color: var(--txt2); text-transform: uppercase; letter-spacing: .05em; }
+  .action-q { font-size: 13.5px; color: var(--txt); margin-top: 1px; }
+  .action-note { font-size: 12px; color: var(--txt2); font-style: italic; margin-top: 4px; }
+
+  /* INFO BAR */
+  .info-bar {
+    background: var(--bg2); border: 1px solid var(--bdr);
+    border-radius: var(--radius-sm); padding: 8px 14px;
+    font-size: 13px; color: var(--txt2);
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+    margin-bottom: 1rem;
+  }
+  .info-bar strong { color: var(--txt); }
+
+  /* LEGEND */
+  .legend {
+    background: var(--bg); border: 1px solid var(--bdr);
+    border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 1rem;
+  }
+  .legend-title { font-size: 12px; font-weight: 600; color: var(--txt); margin-bottom: 6px; }
+  .legend-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; font-size: 11px; color: var(--txt2); }
+  .legend-grid span .s { color: var(--star-on); }
+
+  /* FORM GRID */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-group label { font-size: 12px; color: var(--txt2); display: block; margin-bottom: 4px; }
+  .form-group input, .form-group select { width: 100%; }
+
+  /* SIG CANVAS */
+  .sig-canvas {
+    display: block; width: 100%; height: 110px;
+    cursor: crosshair; touch-action: none;
+    background: var(--bg); border: 1px solid var(--bdr2);
+    border-radius: var(--radius-sm);
+  }
+
+  /* UTILS */
+  .flex-between { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+  .flex-end { display: flex; justify-content: flex-end; gap: 8px; }
+  .sig-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 1.5rem; }
+  .sig-label { font-size: 12px; color: var(--txt2); display: block; margin-bottom: 5px; }
+  .sig-label strong { color: var(--txt); }
+  .section-badge { font-size: 10px; background: rgba(255,255,255,.2); color: rgba(255,255,255,.9); border-radius: 4px; padding: 2px 8px; }
+  .comments-box {
+    background: var(--bg); border: 1px solid var(--bdr);
+    border-radius: var(--radius); padding: 1.25rem;
+    margin-top: 1.5rem; margin-bottom: 1.5rem;
+  }
+  .comments-box h2 { font-size: 15px; font-weight: 600; color: var(--txt); margin-bottom: .375rem; }
+  .comments-box p { font-size: 12px; color: var(--txt2); margin-bottom: .875rem; }
+  .comments-box textarea { width: 100%; font-size: 13px; }
+  h1.page-title { font-size: 20px; font-weight: 600; margin-bottom: 1.25rem; color: var(--txt); }
+  h2.section-title { font-size: 15px; font-weight: 600; margin: 0 0 .5rem; color: var(--txt); }
+  p.section-sub { font-size: 12px; color: var(--txt2); margin: 0 0 .875rem; }
+  .divider { border: none; border-top: 1px solid var(--bdr); margin: 1.5rem 0; }
+  .bottom-bar { display: flex; justify-content: space-between; gap: 10px; padding-bottom: 2rem; margin-top: .5rem; }
+
+  @media (max-width: 560px) {
+    .form-grid, .legend-grid, .summary-grid, .sig-grid { grid-template-columns: 1fr; }
+    .logo-bar-text { font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="app"></div>
+</div>
+
+<script>
+const LG='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';
+
+const GY=['Alberton','Flinders Park','Hackham','Maddington','Malaga','Mandurah','Midvale','Munno Para','Rockingham','Tranmere','Wanneroo'];
+const SC=[
+  {t:'Contract Knowledge',note:null,q:[
+    'What are the two membership costs per week?',
+    'What are the two PIF costs?',
+    'How much is the admin fee?',
+    'When does the quarterly fee come out for DD members and what is the cost?',
+    'How long is the notice period when cancelling the contract?',
+    'How many weeks of free freezes can a DD and PIF member receive? (a. What is the cost per week outside of the free allocation?)',
+    'What is the cost for an overdue payment if a member misses a payment?'
+  ]},
+  {t:'PGM',note:'The below are show me tasks',q:[
+    'Show me how to add/replace a fob for a member',
+    'Show me how to add/replace a photo for a member',
+    'Show me how to find a members contract and/or guarantor form on PGM',
+    'Show me how to get a member to fill in a guarantor form',
+    'What is our underage policy?',
+    'Show me how to send an ePayment Link',
+    'Show me how to investigate payment queries via ePayments in PGM',
+    'Show me how to send a cancellation email via PGM',
+    'Show me how to freeze a membership',
+    'Show me how to edit a frozen membership end date',
+    'Show me how to update a members payment method',
+    'Show me how to upgrade/downgrade a membership contract',
+    'Show me how to change a DD day',
+    'Show me how to search knowledge base for issues'
+  ]},
+  {t:'Shopify',note:'The below are show me tasks',q:[
+    'Show me how to add a customers information into Shopify',
+    'Show me how to sell a casual visit',
+    'Show me how to add a discount for a clearance/staff discount product',
+    'Show me how to exchange a product',
+    'Show me how to process a membership key access fob + lanyard',
+    'Show me how to find an old order for a customer',
+    'Show me how to send a receipt for a purchase',
+    'Show me how to sell a gift card',
+    'Show me how to search for product details (product codes/SOH at other locations)',
+    'Show me how to do an online sale via Shopify'
+  ]},
+  {t:'Retail',note:null,q:[
+    'Explain to me what rotating stock for perishable items is (drinks/supplements/protein)',
+    'Show me where an expiry date is on 1 of each product category: a. Drink  b. Supplement  c. Protein Bar/Cookie',
+    'How often should we refill the fridge?',
+    'What does a retail reset include?',
+    'How often should we be cleaning our retail space?',
+    'Show me how to change the mannequin',
+    'How often should we refill the vending machine?',
+    'Are we able to put any products in any lanes at any time in the vending machine?',
+    'Show me how to update lanes for the vending machine',
+    'If we change a lane to a different product, what is the process afterwards?',
+    'What times do we do the Safety Culture (iAuditor) checks each day?'
+  ]},
+  {t:'Gym Floor',note:null,q:[
+    'How often should we be doing gym floor resets?',
+    'What is involved in doing a reset?',
+    'How often should we warm wash all cardio machines? (as a minimum)',
+    'How often are we dusting all equipment? (as a minimum)',
+    'How often do we do bathroom, bin and wipe checks throughout the day?',
+    'How often do we go through lockers and clear rubbish/lost property?',
+    'How often are saunas cleaned?'
+  ]},
+  {t:'Escalations',note:null,q:[
+    'Show me how to log a job for a broken TechnoGym piece of equipment',
+    'Show me how to log a job for a broken Hammer Strength equipment',
+    'Show me how to log a job for a broken Max Pump equipment',
+    'What is the process to fix a YourReformer issue?',
+    'How do I get upholstery issues fixed?',
+    'How do I find out who are our approved contractors?',
+    'Where do I find all of our Ryderwear policies and procedures?'
+  ]},
+  {t:'Managers / 2IC Only',note:null,q:[
+    'Show me how to do a monthly check',
+    'Show me how to do daily stats',
+    'Walk me through what the daily stats mean',
+    'Take me on a walk through of your gym and what priorities you have identified for our cleaners',
+    'Show me how to do the expiry log',
+    'When does the expiry log need to be completed by?',
+    'Show me how to request a new hire',
+    'Show me how to offboard a team member once they have resigned',
+    'Show me how you do the sales variance report',
+    'Show me how to do a request for purchase',
+    'Show me how to do an order for all other miscellaneous items'
+  ]}
+];
+
+const AL=[];
+SC.forEach((s,si)=>s.q.forEach((q,qi)=>AL.push({sec:s.t,q,si,qi})));
+
+let Ph='info',NM='',AS='',GY_='',DT='',AN=AL.map(()=>({s:0,c:''})),AC='',SA=null,SM=null;
+const SL=['','Immediate training required','Significant development needed','Some gaps to address','Minor improvements needed','Fully competent'];
+
+function esc(t){return(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function sv(){
+  document.querySelectorAll('[data-ci]').forEach(e=>{AN[+e.dataset.ci].c=e.value;});
+  const ac=document.getElementById('ac');if(ac)AC=ac.value;
+}
+
+function logoBar(){
+  return`<div class="logo-bar">
+<img src="data:image/jpeg;base64,${LG}" alt="Ryderwear Gym" onerror="this.style.display='none'" />
+<div><div class="logo-bar-text">RYDERWEAR GYM</div>
+<div class="logo-bar-sub">Team Knowledge Assessment</div></div>
+</div>`;
+}
+
+function starRow(idx){
+  const s=AN[idx].s;
+  return`<div class="star-row" data-sb="${idx}">
+${[1,2,3,4,5].map(n=>`<span class="star${s>=n?' on':''}" data-si="${idx}" data-n="${n}">&#9733;</span>`).join('')}
+<span class="star-lbl">${s?s+'/5 \u2014 '+SL[s]:''}</span>
+</div>`;
+}
+
+function riInf(){
+  return logoBar()+`
+<h1 class="page-title">Knowledge Assessment Form</h1>
+<div class="card" style="padding:1.25rem 1.25rem .875rem;">
+<div class="form-grid">
+<div class="form-group"><label>Team member being assessed</label><input type="text" id="rn" placeholder="Full name" value="${esc(NM)}" /></div>
+<div class="form-group"><label>Assessor</label><input type="text" id="ra" placeholder="Full name" value="${esc(AS)}" /></div>
+<div class="form-group"><label>Gym location</label><select id="rg">
+<option value="">Select gym location...</option>
+${GY.map(g=>`<option${GY_===g?' selected':''} value="${g}">${g}</option>`).join('')}
+</select></div>
+<div class="form-group"><label>Assessment date</label><input type="date" id="rd" value="${DT}" /></div>
+</div>
+</div>
+<p style="font-size:12px;color:var(--txt2);margin:.75rem 0;">All fields required before proceeding.</p>
+<div class="flex-end"><button class="btn-primary" id="b0" style="font-size:14px;padding:9px 28px;">Begin Assessment &rarr;</button></div>`;
+}
+
+function riAs(){
+  let h=logoBar();
+  h+=`<div class="info-bar"><strong>${esc(NM)}</strong><span style="opacity:.4">|</span>Assessor: ${esc(AS)}<span style="opacity:.4">|</span>${esc(GY_)}<span style="opacity:.4">|</span>${DT}</div>`;
+  h+=`<div class="legend"><div class="legend-title">Star rating guide</div>
+<div class="legend-grid">
+<span><span class="s">&#9733;</span> 1 star &mdash; Immediate training required</span>
+<span><span class="s">&#9733;&#9733;&#9733;&#9733;</span> 4 stars &mdash; Minor improvements needed</span>
+<span><span class="s">&#9733;&#9733;</span> 2 stars &mdash; Significant development needed</span>
+<span><span class="s">&#9733;&#9733;&#9733;&#9733;&#9733;</span> 5 stars &mdash; Fully competent (no action needed)</span>
+<span><span class="s">&#9733;&#9733;&#9733;</span> 3 stars &mdash; Some gaps to address</span>
+</div></div>`;
+  let fi=0;
+  SC.forEach(sec=>{
+    const mg=sec.t.includes('Managers');
+    h+=`<div class="card"><div class="card-hdr${mg?' card-hdr-mgr':''}">
+<h2>${esc(sec.t)}</h2>${mg?`<span class="section-badge">Managers &amp; 2IC only</span>`:''}
+</div>${sec.note?`<div class="card-note">${esc(sec.note)}</div>`:''}`;
+    sec.q.forEach((q,qi)=>{
+      const idx=fi++;
+      h+=`<div class="q-row"><p class="q-text"><span class="q-num">${qi+1}.&nbsp;</span>${esc(q)}</p>
+${starRow(idx)}
+<textarea data-ci="${idx}" rows="2" placeholder="Comments / observations..." style="width:100%;font-size:12.5px;margin-top:3px;">${esc(AN[idx].c)}</textarea>
+</div>`;
+    });
+    h+=`</div>`;
+  });
+  h+=`<div class="bottom-bar"><button id="b1">&larr; Back to info</button>
+<button class="btn-success" id="b2" style="font-size:14px;padding:9px 22px;">Complete &amp; view results &rarr;</button></div>`;
+  return h;
+}
+
+function riRs(){
+  const acts=AN.map((a,i)=>({...a,...AL[i]})).filter(a=>a.s>0&&a.s<5).sort((a,b)=>a.s-b.s);
+  const comp=AN.filter(a=>a.s===5).length;
+  const rated=AN.filter(a=>a.s>0).length;
+  const pL={1:'Priority 1 \u2014 Immediate',2:'Priority 2 \u2014 High',3:'Priority 3 \u2014 Medium',4:'Priority 4 \u2014 Low'};
+  let h=logoBar();
+  h+=`<div class="flex-between" style="margin-bottom:1.25rem;">
+<div><h1 style="font-size:20px;font-weight:600;margin:0;">Assessment Results</h1>
+<p style="font-size:12px;color:var(--txt2);margin:3px 0 0;">${esc(NM)} &middot; ${esc(GY_)} &middot; ${DT}</p></div>
+<div class="flex-end"><button id="b3">&larr; Edit</button><button class="btn-info" id="b4">Download PDF</button></div>
+</div>`;
+  h+=`<div class="summary-grid">
+<div class="summary-card" style="background:var(--bg2);border:1px solid var(--bdr);">
+<p style="color:var(--txt2);">Questions rated</p><p style="color:var(--txt);">${rated}/${AL.length}</p></div>
+<div class="summary-card" style="background:var(--success-bg);border:1px solid var(--success-bdr);">
+<p style="color:var(--success-txt);">Fully competent</p><p style="color:var(--success-txt);">${comp}</p></div>
+<div class="summary-card" style="background:var(--warn-bg);border:1px solid var(--warn-bdr);">
+<p style="color:var(--warn-txt);">Training needed</p><p style="color:var(--warn-txt);">${acts.length}</p></div>
+</div>`;
+  if(acts.length>0){
+    h+=`<h2 class="section-title">Training Action Plan</h2>
+<p class="section-sub">Ordered by priority &mdash; 1 star (most urgent) through to 4 stars.</p>`;
+    acts.forEach(a=>{
+      const pl=pL[a.s]||`${a.s} stars`;
+      const strs='&#9733;'.repeat(a.s)+'&#9734;'.repeat(5-a.s);
+      h+=`<div class="action-item"><div class="action-badges">
+<span class="badge badge-${a.s}">${pl}</span>
+<span style="color:var(--star-on);font-size:14px;">${strs}</span>
+</div>
+<div class="action-sec">${esc(a.sec)}</div>
+<div class="action-q">${esc(a.q)}</div>
+${a.c?`<div class="action-note">&ldquo;${esc(a.c)}&rdquo;</div>`:''}
+</div>`;
+    });
+  }else if(rated>0){
+    h+=`<div style="background:var(--success-bg);border:1px solid var(--success-bdr);border-radius:var(--radius);padding:1rem 1.25rem;margin-bottom:1rem;">
+<p style="color:var(--success-txt);font-size:13px;">All rated areas are fully competent &mdash; no training actions required.</p></div>`;
+  }
+  h+=`<div class="comments-box">
+<h2>Assessor Overall Comments</h2>
+<p>Provide a general summary, key strengths, focus areas, and agreed next steps.</p>
+<textarea id="ac" rows="6" placeholder="e.g. Overall the team member demonstrated strong product knowledge and PGM skills. Key areas to focus on are contract knowledge and escalation processes. Agreed to revisit within 4 weeks...">${esc(AC)}</textarea>
+</div>`;
+  h+=`<h2 class="section-title">Signatures</h2>
+<p class="section-sub" style="margin-bottom:.875rem;">Both parties sign to confirm this assessment was conducted fairly and results have been discussed.</p>
+<div class="sig-grid">
+<div><label class="sig-label">Assessor &mdash; <strong>${esc(AS)}</strong></label>
+<canvas id="sga" class="sig-canvas"></canvas>
+<button class="scc" data-t="a" style="font-size:11px;margin-top:5px;">Clear</button></div>
+<div><label class="sig-label">Team member &mdash; <strong>${esc(NM)}</strong></label>
+<canvas id="sgm" class="sig-canvas"></canvas>
+<button class="scc" data-t="m" style="font-size:11px;margin-top:5px;">Clear</button></div>
+</div>`;
+  return h;
+}
+
+function initSig(id,isA){
+  const c=document.getElementById(id);if(!c)return;
+  c.width=c.offsetWidth||300;c.height=110;
+  const cx=c.getContext('2d');
+  cx.strokeStyle='#111';cx.lineWidth=2;cx.lineCap='round';cx.lineJoin='round';
+  const sd=isA?SA:SM;
+  if(sd){const im=new Image();im.onload=()=>cx.drawImage(im,0,0,c.width,c.height);im.src=sd;}
+  let dn=false,lx,ly;
+  const gp=e=>{const r=c.getBoundingClientRect(),s=e.touches?e.touches[0]:e;return{x:(s.clientX-r.left)*(c.width/r.width),y:(s.clientY-r.top)*(c.height/r.height)};};
+  const save=()=>{if(isA)SA=c.toDataURL();else SM=c.toDataURL();};
+  c.addEventListener('mousedown',e=>{e.preventDefault();dn=true;const p=gp(e);lx=p.x;ly=p.y;cx.beginPath();cx.moveTo(lx,ly);});
+  c.addEventListener('mousemove',e=>{if(!dn)return;e.preventDefault();const p=gp(e);cx.lineTo(p.x,p.y);cx.stroke();lx=p.x;ly=p.y;});
+  c.addEventListener('mouseup',()=>{if(!dn)return;dn=false;save();});
+  c.addEventListener('mouseleave',()=>{if(!dn)return;dn=false;save();});
+  c.addEventListener('touchstart',e=>{e.preventDefault();dn=true;const p=gp(e);lx=p.x;ly=p.y;cx.beginPath();cx.moveTo(lx,ly);},{passive:false});
+  c.addEventListener('touchmove',e=>{if(!dn)return;e.preventDefault();const p=gp(e);cx.lineTo(p.x,p.y);cx.stroke();lx=p.x;ly=p.y;},{passive:false});
+  c.addEventListener('touchend',()=>{dn=false;save();});
+}
+
+function bind(){
+  document.getElementById('b0')?.addEventListener('click',()=>{
+    NM=document.getElementById('rn').value.trim();
+    AS=document.getElementById('ra').value.trim();
+    GY_=document.getElementById('rg').value;
+    DT=document.getElementById('rd').value;
+    if(!NM||!AS||!GY_||!DT){alert('Please complete all fields to continue.');return;}
+    Ph='assess';render();window.scrollTo(0,0);
+  });
+  document.getElementById('b1')?.addEventListener('click',()=>{sv();Ph='info';render();window.scrollTo(0,0);});
+  document.getElementById('b2')?.addEventListener('click',()=>{sv();Ph='results';render();window.scrollTo(0,0);});
+  document.getElementById('b3')?.addEventListener('click',()=>{sv();Ph='assess';render();window.scrollTo(0,0);});
+  document.getElementById('b4')?.addEventListener('click',()=>{sv();mkPDF();});
+  document.querySelectorAll('[data-si]').forEach(el=>el.addEventListener('click',e=>{
+    const i=+e.target.dataset.si,n=+e.target.dataset.n;
+    AN[i].s=AN[i].s===n?0:n;
+    const row=document.querySelector(`.star-row[data-sb="${i}"]`);
+    if(!row)return;
+    row.querySelectorAll('[data-si]').forEach((s,j)=>{s.classList.toggle('on',AN[i].s>j);});
+    const lbl=row.querySelector('.star-lbl');
+    if(lbl)lbl.textContent=AN[i].s?AN[i].s+'/5 \u2014 '+SL[AN[i].s]:'';
+  }));
+  document.querySelectorAll('.scc').forEach(b=>b.addEventListener('click',e=>{
+    const a=e.target.dataset.t==='a';
+    if(a){SA=null;const c=document.getElementById('sga');if(c)c.getContext('2d').clearRect(0,0,c.width,c.height);}
+    else{SM=null;const c=document.getElementById('sgm');if(c)c.getContext('2d').clearRect(0,0,c.width,c.height);}
+  }));
+  if(Ph==='results')setTimeout(()=>{initSig('sga',true);initSig('sgm',false);},80);
+}
+
+function render(){
+  document.getElementById('app').innerHTML=Ph==='info'?riInf():Ph==='assess'?riAs():riRs();
+  bind();
+}
+
+function dSt(doc,x,y,n){
+  for(let i=0;i<5;i++){doc.setFillColor(...(i<n?[245,158,11]:[209,213,219]));doc.circle(x+i*4.8+2,y,1.9,'F');}
+}
+function pH(doc){
+  try{doc.addImage('data:image/jpeg;base64,'+LG,'JPEG',13,5,55,17);}catch(e){}
+  doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(140,140,140);
+  doc.text('TEAM KNOWLEDGE ASSESSMENT',195,13,{align:'right'});
+  doc.text(`${NM||'Team Member'}  |  ${GY_||''}  |  ${DT}`,195,18,{align:'right'});
+  doc.setDrawColor(220,220,220);doc.line(13,24,197,24);
+  return 29;
+}
+
+function mkPDF(){
+  if(!window.jspdf){alert('PDF library loading, please try again in a moment.');return;}
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'a4'});
+  const M=13,CW=184;
+  let y=pH(doc);
+  doc.setFillColor(18,18,18);doc.roundedRect(M,y,CW,34,2,2,'F');
+  doc.setTextColor(255,255,255);doc.setFontSize(16);doc.setFont('helvetica','bold');
+  doc.text('TEAM KNOWLEDGE ASSESSMENT',M+7,y+11);
+  doc.setFontSize(10);doc.setFont('helvetica','normal');
+  doc.text('Ryderwear Gym  \u2014  Confidential Assessment Record',M+7,y+18);
+  doc.setFontSize(9);doc.setTextColor(180,180,180);doc.text(DT,M+CW-4,y+18,{align:'right'});
+  y+=42;
+  const flds=[['Team member assessed',NM],['Assessor',AS],['Gym location',GY_],['Date completed',DT]];
+  const fw=(CW-10)/2;
+  flds.forEach(([l,v],i)=>{
+    const fx=M+(i%2)*(fw+10);
+    if(i%2===0&&i>0)y+=16;
+    doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(140,140,140);doc.text(l.toUpperCase(),fx,y);
+    doc.setFontSize(11);doc.setFont('helvetica','bold');doc.setTextColor(20,20,20);doc.text(v||'\u2014',fx,y+5);
+    if(i===1)y+=14;
+  });
+  y+=20;doc.setDrawColor(220,220,220);doc.line(M,y,M+CW,y);y+=7;
+  const acts=AN.map((a,i2)=>({...a,...AL[i2]})).filter(a=>a.s>0&&a.s<5).sort((a,b)=>a.s-b.s);
+  const comp=AN.filter(a=>a.s===5).length;
+  const rated=AN.filter(a=>a.s>0).length;
+  [{l:'Questions Rated',v:`${rated}/${AL.length}`,bg:[242,242,242],fg:[40,40,40]},{l:'Fully Competent',v:String(comp),bg:[220,252,231],fg:[22,101,52]},{l:'Training Required',v:String(acts.length),bg:[254,243,199],fg:[113,63,18]}].forEach((b,i)=>{
+    const bx=M+i*(61+1.5);
+    doc.setFillColor(...b.bg);doc.roundedRect(bx,y,61,18,2,2,'F');
+    doc.setTextColor(...b.fg);doc.setFontSize(8);doc.setFont('helvetica','normal');doc.text(b.l,bx+30.5,y+6,{align:'center'});
+    doc.setFontSize(16);doc.setFont('helvetica','bold');doc.text(b.v,bx+30.5,y+15,{align:'center'});
+  });
+  let fi=0;
+  SC.forEach(sec=>{
+    doc.addPage();y=pH(doc);
+    const mg=sec.t.includes('Managers');
+    doc.setFillColor(...(mg?[45,27,105]:[18,18,18]));doc.rect(M,y,CW,11,'F');
+    doc.setTextColor(255,255,255);doc.setFontSize(11);doc.setFont('helvetica','bold');doc.text(sec.t.toUpperCase(),M+4,y+7.5);
+    if(mg){doc.setFontSize(8);doc.setFont('helvetica','normal');doc.text('Managers & 2IC Only',M+CW-2,y+7.5,{align:'right'});}
+    y+=15;
+    if(sec.note){doc.setFontSize(8);doc.setFont('helvetica','italic');doc.setTextColor(110,110,110);doc.text(sec.note,M,y);y+=6;}
+    sec.q.forEach((q,qi)=>{
+      if(y>258){doc.addPage();y=pH(doc);doc.setFillColor(...(mg?[45,27,105]:[18,18,18]));doc.rect(M,y,CW,8,'F');doc.setTextColor(255,255,255);doc.setFontSize(9);doc.setFont('helvetica','bold');doc.text(sec.t.toUpperCase()+' (cont.)',M+3,y+5.5);y+=12;}
+      const idx=fi++;const ans=AN[idx];
+      const ql=doc.splitTextToSize(`${qi+1}.  ${q}`,CW-30);
+      doc.setFontSize(9.5);doc.setFont('helvetica','bold');doc.setTextColor(20,20,20);doc.text(ql,M,y);
+      dSt(doc,M+CW-26,y-1,ans.s);
+      if(ans.s===0){doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setTextColor(180,180,180);doc.text('not rated',M+CW-2,y,{align:'right'});}
+      y+=ql.length*4.8+1;
+      if(ans.c){doc.setFontSize(8.5);doc.setFont('helvetica','italic');doc.setTextColor(110,110,110);const cl=doc.splitTextToSize('Notes: '+ans.c,CW-8);doc.text(cl,M+4,y);y+=cl.length*4.2+1;}
+      doc.setDrawColor(235,235,235);doc.line(M,y,M+CW,y);y+=4;
+    });
+  });
+  if(acts.length>0){
+    doc.addPage();y=pH(doc);
+    doc.setFillColor(18,18,18);doc.rect(M,y,CW,12,'F');
+    doc.setTextColor(255,255,255);doc.setFontSize(12);doc.setFont('helvetica','bold');doc.text('TRAINING ACTION PLAN',M+4,y+8.5);y+=16;
+    doc.setFontSize(8.5);doc.setFont('helvetica','normal');doc.setTextColor(100,100,100);doc.text('Areas requiring training, listed by priority. 1 star = most urgent.',M,y);y+=8;
+    const pBg={1:[254,226,226],2:[254,243,199],3:[254,249,195],4:[219,234,254]};
+    const pFg={1:[153,27,27],2:[113,63,18],3:[92,53,8],4:[29,78,216]};
+    const pLb={1:'PRIORITY 1 \u2014 IMMEDIATE',2:'PRIORITY 2 \u2014 HIGH',3:'PRIORITY 3 \u2014 MEDIUM',4:'PRIORITY 4 \u2014 LOW'};
+    acts.forEach(a=>{
+      if(y>255){doc.addPage();y=pH(doc);}
+      doc.setFillColor(...(pBg[a.s]||[240,240,240]));doc.rect(M,y,CW,8,'F');
+      doc.setTextColor(...(pFg[a.s]||[80,80,80]));doc.setFontSize(8);doc.setFont('helvetica','bold');doc.text(pLb[a.s],M+3,y+5.5);
+      dSt(doc,M+CW-26,y+4,a.s);y+=11;
+      doc.setFontSize(7.5);doc.setFont('helvetica','italic');doc.setTextColor(120,120,120);doc.text(a.sec.toUpperCase(),M,y);y+=4.5;
+      doc.setFontSize(9.5);doc.setFont('helvetica','bold');doc.setTextColor(20,20,20);
+      const ql=doc.splitTextToSize(a.q,CW);doc.text(ql,M,y);y+=ql.length*4.8+2;
+      if(a.c){doc.setFontSize(8.5);doc.setFont('helvetica','italic');doc.setTextColor(100,100,100);const cl=doc.splitTextToSize('Assessor notes: '+a.c,CW-6);doc.text(cl,M+4,y);y+=cl.length*4.2+2;}
+      doc.setFontSize(8.5);doc.setFont('helvetica','normal');doc.setTextColor(110,110,110);
+      doc.text('Action / training required:',M,y);doc.setDrawColor(185,185,185);doc.line(M+41,y,M+CW,y);y+=5;
+      doc.line(M,y,M+CW,y);y+=5;
+      doc.text('Target completion date:',M,y);doc.line(M+38,y,M+78,y);
+      doc.text('Responsible person:',M+82,y);doc.line(M+107,y,M+CW,y);y+=10;
+      doc.setDrawColor(220,220,220);doc.line(M,y,M+CW,y);y+=5;
+    });
+  }
+  doc.addPage();y=pH(doc);
+  doc.setFillColor(18,18,18);doc.rect(M,y,CW,11,'F');
+  doc.setTextColor(255,255,255);doc.setFontSize(11);doc.setFont('helvetica','bold');doc.text('ASSESSOR OVERALL COMMENTS',M+4,y+7.5);y+=16;
+  if(AC&&AC.trim()){
+    doc.setFontSize(10);doc.setFont('helvetica','normal');doc.setTextColor(25,25,25);
+    const acl=doc.splitTextToSize(AC.trim(),CW);doc.text(acl,M,y);y+=acl.length*5+8;
+  }else{
+    doc.setFillColor(248,248,248);doc.roundedRect(M,y,CW,36,2,2,'F');
+    doc.setFontSize(9);doc.setFont('helvetica','italic');doc.setTextColor(180,180,180);doc.text('No comments entered.',M+CW/2,y+20,{align:'center'});y+=42;
+  }
+  if(y>228){doc.addPage();y=pH(doc);}else{doc.setDrawColor(220,220,220);doc.line(M,y,M+CW,y);y+=8;}
+  doc.setFillColor(18,18,18);doc.rect(M,y,CW,11,'F');
+  doc.setTextColor(255,255,255);doc.setFontSize(11);doc.setFont('helvetica','bold');doc.text('SIGN OFF',M+4,y+7.5);y+=16;
+  doc.setFontSize(8.5);doc.setFont('helvetica','normal');doc.setTextColor(100,100,100);
+  doc.text('By signing below, both parties confirm this assessment was conducted fairly and results have been discussed.',M,y,{maxWidth:CW});y+=10;
+  const hw=(CW-12)/2;
+  [['Assessor',AS,SA],['Team Member',NM,SM]].forEach(([role,nm,sig],i)=>{
+    const bx=M+i*(hw+12);
+    doc.setFontSize(10);doc.setFont('helvetica','bold');doc.setTextColor(30,30,30);doc.text(role,bx,y);
+    doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(100,100,100);doc.text(nm||'',bx,y+5);
+    if(sig){try{doc.addImage(sig,'PNG',bx,y+9,hw,28);}catch(e){}}
+    else{doc.setFillColor(248,248,248);doc.roundedRect(bx,y+9,hw,28,2,2,'F');}
+    doc.setDrawColor(80,80,80);doc.line(bx,y+40,bx+hw,y+40);
+    doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(120,120,120);
+    doc.text('Signature',bx,y+45);doc.text('Date: _______________',bx,y+51);
+  });
+  const pg=doc.internal.getNumberOfPages();
+  for(let p=1;p<=pg;p++){
+    doc.setPage(p);doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setTextColor(160,160,160);
+    doc.text(`Ryderwear Gym  |  ${NM}  |  ${GY_}  |  Page ${p} of ${pg}`,105,290,{align:'center'});
+  }
+  doc.save(`ryderwear-assessment-${(NM||'team').replace(/\s+/g,'-').toLowerCase()}.pdf`);
+}
+
+render();
+</script>
+</body>
+</html>
