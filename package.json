@@ -1,13 +1,14 @@
 {
   "name": "ryderwear-knowledge-assessment",
-  "version": "1.0.0",
-  "description": "Ryderwear Gym team knowledge assessment — static site.",
+  "version": "1.1.0",
+  "description": "Ryderwear Gym team knowledge assessment with password-protected admin dashboard.",
   "private": true,
   "scripts": {
-    "start": "serve -s . -l tcp://0.0.0.0:${PORT:-3000}"
+    "start": "node server.js"
   },
   "dependencies": {
-    "serve": "^14.2.4"
+    "basic-auth": "^2.0.1",
+    "express": "^4.19.2"
   },
   "engines": {
     "node": ">=18"
