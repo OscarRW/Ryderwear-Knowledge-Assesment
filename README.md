@@ -2,23 +2,32 @@
 
 Single-page knowledge assessment for Ryderwear Gym team members, with a password-protected admin dashboard that lists every submitted assessment.
 
+Runs on **Vercel** (serverless functions) with **Upstash Redis** (Vercel Marketplace) for storage.
+
 ## Routes
 
 | Route | Who | What |
 |---|---|---|
-| `/` | Public | The assessment form |
+| `/` | Public | The assessment form (static `index.html`) |
 | `POST /api/submit` | Public | Called by the form when "Complete" or "Download PDF" is clicked |
 | `/admin` | Admin | List of all submitted assessments (table) |
 | `/admin/:id` | Admin | Opens a specific assessment in the results view (PDF re-downloadable) |
 | `POST /admin/:id/delete` | Admin | Deletes an assessment |
 
-## Railway setup
+The `/admin*` routes are mapped to serverless functions via rewrites in `vercel.json`.
 
-### 1. Deploy
-Connect this repo as a Railway service. Nixpacks auto-detects Node and runs `npm install` → `npm start`.
+## Vercel setup
 
-### 2. Admin credentials (required)
-In the Railway service **Variables** tab, add:
+### 1. Import
+Import this repo as a Vercel project (Framework Preset: **Other** — no build step needed).
+
+### 2. Storage (required for submissions to persist)
+Vercel → project → **Storage** → **Create Database** → **Redis** (Upstash, from the Marketplace) → connect it to this project. That injects the connection env vars automatically (`KV_REST_API_URL` / `KV_REST_API_TOKEN`, or the `UPSTASH_REDIS_REST_*` equivalents — the app reads either).
+
+Without a store connected, the app still runs but writes to an ephemeral `/tmp` file that resets on every deploy/cold start.
+
+### 3. Admin credentials (required)
+Vercel → project → **Settings → Environment Variables**, add:
 
 | Variable | Example | Required |
 |---|---|---|
@@ -27,23 +36,30 @@ In the Railway service **Variables** tab, add:
 
 Without these, admin defaults to `admin` / `changeme` — **change them**.
 
-### 3. Persistent storage (recommended)
-Submissions are written to `submissions.json`. By default Railway re-creates the container on every redeploy, so data is lost. To keep data across deploys:
-
-1. Service → **Settings** → **Volumes** → **New Volume**
-2. Mount path: `/data`
-3. Size: 1 GB is plenty
-
-Without a volume, the app still works but data resets on each deploy. You can also set `DATA_DIR` env var to override the default location.
-
 ## Run locally
 
 ```
 npm install
-ADMIN_USER=oscar ADMIN_PASS=yourpassword npm start
+npm run dev          # vercel dev — serves the form + functions
 ```
 
 - Form: http://localhost:3000
-- Admin: http://localhost:3000/admin (browser will prompt for user / password)
+- Admin: http://localhost:3000/admin (browser prompts for user / password)
 
-Data is stored in `./data/submissions.json` locally.
+With no Redis env vars set, submissions are stored locally in `/tmp/rw-assess-data/submissions.json` (override with `DATA_DIR`). Set `ADMIN_USER` / `ADMIN_PASS` to test the admin login.
+
+## Tests
+
+```
+npm test             # drives submit -> list -> view -> delete against the local-file store
+```
+
+## Storage shape
+
+Submissions are stored as a JSON array under the Redis key `submissions`, each item:
+
+```
+{ id, created_at, updated_at, team_member, assessor, gym, assessment_date, data }
+```
+
+`data` is the full form payload (`NM, AS, GY_, DT, AN[], AC, SA, SM`).

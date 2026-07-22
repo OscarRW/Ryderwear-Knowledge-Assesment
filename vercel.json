@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    { "source": "/admin", "destination": "/api/admin" },
+    { "source": "/admin/:id/delete", "destination": "/api/admin-delete?id=:id" },
+    { "source": "/admin/:id", "destination": "/api/admin-view?id=:id" }
+  ],
+  "functions": {
+    "api/admin-view.js": { "includeFiles": "index.html" }
+  }
+}
