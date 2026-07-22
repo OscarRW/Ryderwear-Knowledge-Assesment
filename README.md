@@ -56,7 +56,7 @@ npm test             # drives submit -> list -> view -> delete against the local
 
 ## Storage shape
 
-Submissions are stored as a JSON array under the Redis key `submissions`, each item:
+Submissions are stored as a JSON array under the Redis key `rw-assessment:submissions` (namespaced so the store can be shared with other projects), each item:
 
 ```
 { id, created_at, updated_at, team_member, assessor, gym, assessment_date, data }
