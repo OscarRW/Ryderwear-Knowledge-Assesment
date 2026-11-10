@@ -1,10 +1,16 @@
 // Functional test of the serverless handlers using the local-file storage fallback.
-// Mocks Vercel's (req, res) so we can drive submit -> list -> view -> delete end to end.
+// Mocks Vercel's (req, res) so the handlers can be driven directly.
+//
+// Retired 11 Nov 2026. What must hold now: the public form is gone, nothing new
+// can be submitted, and every past result is still listable, viewable (with its
+// PDF) and deletable by an admin.
 process.env.DATA_DIR = '/tmp/rw-assess-test-data';
 process.env.ADMIN_USER = 'oscar';
 process.env.ADMIN_PASS = 'secret';
-require('fs').rmSync(process.env.DATA_DIR, { recursive: true, force: true });
+const fs = require('fs');
+fs.rmSync(process.env.DATA_DIR, { recursive: true, force: true });
 
+const { loadAll, saveAll } = require('../lib/store');
 const submit = require('../api/submit');
 const adminList = require('../api/admin');
 const adminView = require('../api/admin-view');
@@ -23,68 +29,75 @@ const basic = (u, p) => 'Basic ' + Buffer.from(u + ':' + p).toString('base64');
 const assert = (cond, msg) => { if (!cond) { console.error('FAIL:', msg); process.exit(1); } console.log('pass:', msg); };
 
 (async () => {
-  // 1. submit a new assessment
   const payload = {
     NM: 'Jane Doe', AS: 'Oscar', GY_: 'Malaga', DT: '2026-07-22',
     AN: [{ s: 5, c: '' }, { s: 3, c: 'needs work' }, { s: 0, c: '' }],
     AC: 'Solid overall', SA: 'data:sigA', SM: 'data:sigM',
   };
+
+  // 1. the home page is the notice, and posts nowhere
+  const home = fs.readFileSync('index.html', 'utf8');
+  assert(/has been retired/.test(home), 'home page is the retirement notice');
+  assert(!/api\/submit/.test(home), 'home page no longer submits anything');
+
+  // 2. a complete, valid submission is refused and nothing is stored
   let res = mockRes();
   await submit({ method: 'POST', body: payload }, res);
-  assert(res.type === 'json' && res.body.id, 'submit returns an id');
-  const id = res.body.id;
+  assert(res.statusCode === 410, 'submit is refused (410 Gone)');
+  assert((await loadAll()).length === 0, 'the refused submission was not stored');
 
-  // 2. missing required field -> 400
+  // 3. so is an edit to an existing one
+  await saveAll([{ id: 'past1', created_at: '2026-07-22T05:00:00.000Z', updated_at: '2026-07-22T05:00:00.000Z',
+    team_member: 'Jane Doe', assessor: 'Oscar', gym: 'Malaga', assessment_date: '2026-07-22', data: payload }]);
   res = mockRes();
-  await submit({ method: 'POST', body: { NM: 'x' } }, res);
-  assert(res.statusCode === 400, 'submit rejects missing fields (400)');
+  await submit({ method: 'POST', body: { ...payload, id: 'past1', AC: 'Changed after retirement' } }, res);
+  assert(res.statusCode === 410, 'editing a past assessment is refused too');
+  assert((await loadAll())[0].data.AC === 'Solid overall', 'the past assessment is unchanged');
 
-  // 3. update existing (same id) does not create a duplicate
-  res = mockRes();
-  await submit({ method: 'POST', body: { ...payload, id, AC: 'Updated note' } }, res);
-  assert(res.body.id === id, 'submit with same id updates in place');
-
-  // 4. admin list requires auth
+  // 4. admin list still requires auth
   res = mockRes();
   await adminList({ headers: {} }, res);
   assert(res.statusCode === 401, 'admin list blocks unauthorised (401)');
-
-  // 5. admin list with wrong password -> 401
   res = mockRes();
   await adminList({ headers: { authorization: basic('oscar', 'wrong') } }, res);
   assert(res.statusCode === 401, 'admin list blocks wrong password (401)');
 
-  // 6. admin list authorised shows the single submission
+  // 5. and still shows past results, with no way to start a new one
   res = mockRes();
   await adminList({ headers: { authorization: basic('oscar', 'secret') } }, res);
-  assert(res.statusCode === 200 && /Jane Doe/.test(res.body), 'admin list shows submission when authorised');
-  assert(/1 assessment submitted/.test(res.body), 'admin list count is 1 (no duplicate from update)');
-  // avg of rated (5,3) = 4.0; comp (s===5) = 1; train (0<s<5) = 1
+  assert(res.statusCode === 200 && /Jane Doe/.test(res.body), 'admin list shows the past submission');
+  assert(/1 assessment submitted/.test(res.body), 'admin list count is 1');
   assert(/pill-avg">4\.0/.test(res.body), 'admin list computes avg 4.0');
+  assert(!/New assessment/.test(res.body), 'admin list no longer offers a new assessment');
 
-  // 7. admin view injects the payload into index.html
+  // 6. viewing one renders it in the kept copy of the form
   res = mockRes();
-  await adminView({ headers: { authorization: basic('oscar', 'secret') }, query: { id } }, res);
+  await adminView({ headers: { authorization: basic('oscar', 'secret') }, query: { id: 'past1' } }, res);
   assert(res.statusCode === 200 && /window\.__LOAD__=/.test(res.body), 'admin view injects window.__LOAD__');
   assert(res.body.indexOf('<!-- ADMIN_LOAD_INJECT -->') === -1, 'admin view replaced the placeholder');
-  assert(res.body.includes('"__id":"' + id + '"'), 'admin view payload carries the id');
+  assert(res.body.includes('"__id":"past1"'), 'admin view payload carries the id');
+  assert(/function mkPDF/.test(res.body), 'admin view is the real form, so the PDF can still be downloaded');
+  assert(res.body.indexOf('window.__LOAD__=') < res.body.indexOf("if(!window.__LOAD__)location.replace('/')"),
+    'the data is injected before the guard that sends direct visitors away');
 
-  // 8. admin view unknown id -> 404
+  // 7. the kept form sends anyone who opens it directly to the notice
+  const kept = fs.readFileSync('Ryderwear_Gym_Knowledge_Assessment.html', 'utf8');
+  assert(/if\(!window\.__LOAD__\)location\.replace\('\/'\)/.test(kept), 'the kept form redirects direct visitors');
+  const vj = JSON.parse(fs.readFileSync('vercel.json', 'utf8'));
+  assert(vj.functions['api/admin-view.js'].includeFiles === 'Ryderwear_Gym_Knowledge_Assessment.html', 'admin view is bundled with the kept form');
+
+  // 8. unknown id -> 404
   res = mockRes();
   await adminView({ headers: { authorization: basic('oscar', 'secret') }, query: { id: 'nope' } }, res);
   assert(res.statusCode === 404, 'admin view 404 for unknown id');
 
-  // 9. delete requires auth
+  // 9. delete still requires auth, and still works
   res = mockRes();
-  await adminDelete({ headers: {}, query: { id } }, res);
+  await adminDelete({ headers: {}, query: { id: 'past1' } }, res);
   assert(res.statusCode === 401, 'delete blocks unauthorised (401)');
-
-  // 10. delete authorised removes it and redirects
   res = mockRes();
-  await adminDelete({ headers: { authorization: basic('oscar', 'secret') }, query: { id } }, res);
+  await adminDelete({ headers: { authorization: basic('oscar', 'secret') }, query: { id: 'past1' } }, res);
   assert(res.statusCode === 303 && res.headers.Location === '/admin', 'delete redirects to /admin (303)');
-
-  // 11. list now empty
   res = mockRes();
   await adminList({ headers: { authorization: basic('oscar', 'secret') } }, res);
   assert(/No assessments submitted yet/.test(res.body), 'list empty after delete');

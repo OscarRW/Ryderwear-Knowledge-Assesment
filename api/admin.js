@@ -75,7 +75,7 @@ function renderAdminList(list) {
   <header>
     <div>
       <h1>Team Knowledge Assessments</h1>
-      <p class="sub">${list.length} assessment${list.length === 1 ? '' : 's'} submitted &middot; <a href="/">+ New assessment</a></p>
+      <p class="sub">${list.length} assessment${list.length === 1 ? '' : 's'} submitted &middot; Retired 11 November 2026, so no new assessments can be added</p>
     </div>
   </header>
   ${list.length === 0 ? `<div class="empty">No assessments submitted yet.</div>` : `

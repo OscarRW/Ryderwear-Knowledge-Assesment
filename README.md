@@ -1,5 +1,7 @@
 # Ryderwear Gym — Team Knowledge Assessment
 
+> **Retired 11 November 2026.** Induction training now lives in the Ryderwear Compliance Manager. The home page is a notice, `POST /api/submit` returns 410 for everything (new assessments and edits alike), and past results stay viewable, downloadable as PDF and deletable under `/admin`. The form survives only as `Ryderwear_Gym_Knowledge_Assessment.html`, which `/admin/:id` renders results into; opening it directly sends you to the notice. To bring the tool back, revert the commit that retired it.
+
 Single-page knowledge assessment for Ryderwear Gym team members, with a password-protected admin dashboard that lists every submitted assessment.
 
 Runs on **Vercel** (serverless functions) with **Upstash Redis** (Vercel Marketplace) for storage.
@@ -8,8 +10,8 @@ Runs on **Vercel** (serverless functions) with **Upstash Redis** (Vercel Marketp
 
 | Route | Who | What |
 |---|---|---|
-| `/` | Public | The assessment form (static `index.html`) |
-| `POST /api/submit` | Public | Called by the form when "Complete" or "Download PDF" is clicked |
+| `/` | Public | Retirement notice (static `index.html`) |
+| `POST /api/submit` | Public | Retired: always 410 Gone |
 | `/admin` | Admin | List of all submitted assessments (table) |
 | `/admin/:id` | Admin | Opens a specific assessment in the results view (PDF re-downloadable) |
 | `POST /admin/:id/delete` | Admin | Deletes an assessment |
